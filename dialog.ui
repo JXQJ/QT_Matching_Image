@@ -56,7 +56,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Selected Image</string>
+    <string>Input Image</string>
    </property>
   </widget>
   <widget class="QListView" name="listView">
@@ -116,6 +116,9 @@
     <property name="text">
      <string>Correlation-Base</string>
     </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
    </widget>
    <widget class="QRadioButton" name="chk_shape">
     <property name="geometry">
@@ -130,7 +133,7 @@
      <string>Shape-Base</string>
     </property>
     <property name="checked">
-     <bool>true</bool>
+     <bool>false</bool>
     </property>
    </widget>
   </widget>
@@ -146,6 +149,21 @@
    <property name="title">
     <string>Result</string>
    </property>
+   <widget class="QTreeWidget" name="result">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>20</y>
+      <width>491</width>
+      <height>192</height>
+     </rect>
+    </property>
+    <column>
+     <property name="text">
+      <string notr="true">1</string>
+     </property>
+    </column>
+   </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_3">
    <property name="geometry">
@@ -157,7 +175,7 @@
     </rect>
    </property>
    <property name="title">
-    <string>Sample Image</string>
+    <string>Template Image</string>
    </property>
    <widget class="QRadioButton" name="chk_newImg">
     <property name="geometry">
