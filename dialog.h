@@ -66,7 +66,9 @@ private:
     const std::string file1,file2;
 
     int countMatch = 0;
-    int x[5],y[5],w[5],h[5];
+    int x[50],y[50],w[50],h[50];
+    double correlD[50],inputCorrel=0.5;
+
 
 };
 

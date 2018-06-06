@@ -66,6 +66,7 @@ Dialog::Dialog(QWidget *parent) :
         ui->correlation_methode->addItem("3:TM CCORR");
         ui->correlation_methode->addItem("4:TM CCORR NORMED");
         ui->correlation_methode->addItem("5:TM COEFF NORMED");
+
 }
 
 void Dialog::updateImage1()
@@ -98,7 +99,9 @@ void Dialog::on_btn_load_clicked()
    std::string file1 = filename.toStdString();
    image = imread(file1, 1);
    updateImage1();
-   chkImage1 = 1;
+   if(file1=="")
+        chkImage1 = 0;
+   else chkImage1 = 1;
 
 }
 
@@ -116,7 +119,9 @@ void Dialog::on_btn_load2_clicked()
        std::string file2 = filename.toStdString();
        image2 = imread(file2, 1);
        updateImage2();
-       chkImage2 = 1;
+       if(file2=="")
+            chkImage2 = 0;
+       else chkImage2 = 1;
     }
 }
 
@@ -192,11 +197,13 @@ void Dialog::MatchingMethod( int, void* )
           //imshow("crop", crop);
           correlation();
 
-          if(correl>0.95){
+          if(correl>0.97){
                 rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
+                correlD[countMatch-1]=correl;
           }
           else
           {
+
                countMatch--;
                return;
           }
@@ -212,7 +219,7 @@ void Dialog::MatchingMethod( int, void* )
 }
 void Dialog::on_btn_match_clicked()
 {
-
+    countMatch = 0;
 
     if(chkImage1==0&&chkImage2==0)
     {
@@ -230,6 +237,20 @@ void Dialog::on_btn_match_clicked()
         return;
     }
 
+    QString intput=ui->coef->text();
+    if(intput=="")
+    {
+        QMessageBox::information(this,tr("Can not matching!"),tr("Please input coefficeint."));
+        return;
+    }
+    if(intput.toDouble()<0.5)
+    {
+        QMessageBox::information(this,tr("Can not matching!"),tr("Please input coefficeint more than 0.5!"));
+        return;
+    }
+    inputCorrel = intput.toDouble();
+    QString str = QString::number(inputCorrel);
+
     ui->result->clear();
     updateImage1();
 
@@ -243,12 +264,14 @@ void Dialog::on_btn_match_clicked()
         MatchingMethod( 0, 0 );
         QString qstr = QString::number(correl);
 
-        AddRoot("Correlation",qstr,-1);
+
         for(int i=0;i<countMatch;i++)
         {
             QString str = QString::number(i+1);
             AddRoot("Matching ", str ,i);
         }
+        if(countMatch==0)
+             AddRoot("Not match! ", "0" ,-1);
     }
 }
 void Dialog::AddRoot(QString name,QString description,int index)
@@ -264,7 +287,9 @@ void Dialog::AddRoot(QString name,QString description,int index)
        QString ystr = QString::number(y[index]);
        QString wstr = QString::number(w[index]);
        QString hstr = QString::number(h[index]);
+       QString cor = QString::number(correlD[index]);
 
+       AddChild(itm,"Correlation",cor);
        AddChild(itm,"X",xstr);
        AddChild(itm,"Y",ystr);
        AddChild(itm,"Width",wstr);
