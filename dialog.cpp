@@ -53,12 +53,18 @@ inline QPixmap cvMatToQPixmap( const cv::Mat &inMat )
     return QPixmap::fromImage( cvMatToQImage( inMat ) );
 }
 
-//
 Dialog::Dialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Dialog)
 {
     ui->setupUi(this);
+
+        ui->result->setColumnCount(2);
+        ui->correlation_methode->addItem("1:SQDIFF");
+        ui->correlation_methode->addItem("2:SQDIFF NORMED");
+        ui->correlation_methode->addItem("3:TM CCORR");
+        ui->correlation_methode->addItem("4:TM CCORR NORMED");
+        ui->correlation_methode->addItem("5:TM COEFF NORMED");
 }
 
 void Dialog::updateImage1()
@@ -119,31 +125,21 @@ int max_Trackbar = 5;
 
 void Dialog::correlation()
 {
-    /* Mat resMorMat;
-     const int nRows = image.rows;
-     const int nCols = image.cols;
-     CvPoint *pPoint = new CvPoint[nRows*nCols];
-     pPoint[0] = cvPoint(100, 50);
-     resMorMat = image.clone();
-     circle(resMorMat, pPoint[0], 5, Scalar(255, 0, 0),1,8,0);
-
-     QPixmap imgIn = cvMatToQPixmap(resMorMat);
-     ui->label->setPixmap(imgIn);
-     ui->label->setScaledContents(true);
-     ui->label->show();*/
 
      img = image.clone();
      templ = image2.clone();
 
-
-     //namedWindow( image_window, WINDOW_AUTOSIZE );
-     //namedWindow( result_window, WINDOW_AUTOSIZE );
-     //const char* trackbar_label = "Method: \n 0: SQDIFF \n 1: SQDIFF NORMED \n 2: TM CCORR \n 3: TM CCORR NORMED \n 4: TM COEFF \n 5: TM COEFF NORMED";
-     //createTrackbar( trackbar_label, image_window, &match_method, max_Trackbar,MatchingMethod());
      MatchingMethod( 0, 0 );
 
      cv::Mat corr;
-     cv::matchTemplate(image, image2, corr, cv::TM_CCORR_NORMED);
+     if(ui->correlation_methode->currentIndex()==0)
+     {
+         cv::matchTemplate(image, image2, corr, cv::TM_SQDIFF);
+     }
+     else if(ui->correlation_methode->currentIndex()==3)
+     {
+         cv::matchTemplate(image, image2, corr, cv::TM_CCORR_NORMED);
+     }
      correl = corr.at<float>(0,0);  // corr only has one pixel
 }
 void Dialog::MatchingMethod( int, void* )
@@ -176,15 +172,16 @@ void Dialog::MatchingMethod( int, void* )
       }
       rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
 
+      w[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
+      h[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
+      x[countMatch] = matchLoc.x;
+      y[countMatch++] = matchLoc.y;
 
       QPixmap imgIn = cvMatToQPixmap(img_display);
       ui->label->setPixmap(imgIn);
       ui->label->setScaledContents(true);
       ui->label->show();
 
-      //rectangle( result, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar::all(0), 2, 8, 0 );
-      //imshow( image_window, img_display );
-      //imshow( result_window, result );
       return;
 }
 void Dialog::on_btn_match_clicked()
@@ -220,20 +217,32 @@ void Dialog::on_btn_match_clicked()
         correlation();
         QString qstr = QString::number(correl);
 
-        ui->result->setColumnCount(2);
-        AddRoot("Correlation",qstr);
+        AddRoot("Correlation",qstr,0);
+        AddRoot("Matching ", "1" ,1);
     }
 }
-void Dialog::AddRoot(QString name,QString description)
+void Dialog::AddRoot(QString name,QString description,int choice)
 {
     QTreeWidgetItem *itm= new QTreeWidgetItem(ui->result);
     itm->setText(0,name);
     itm->setText(1,description);
     ui->result->addTopLevelItem(itm);
+
+    if(choice == 1)
+    {
+       QString xstr = QString::number(x[0]);
+       QString ystr = QString::number(y[0]);
+       AddChild(itm,"X",xstr);
+       AddChild(itm,"Y",ystr);
+       xstr = QString::number(w[0]);
+       ystr = QString::number(h[0]);
+       AddChild(itm,"width",xstr);
+       AddChild(itm,"height",ystr);
+    }
 }
 void Dialog::AddChild(QTreeWidgetItem *parent,QString name,QString description)
 {
-    QTreeWidgetItem *itm= new QTreeWidgetItem(ui->result);
+    QTreeWidgetItem *itm= new QTreeWidgetItem();
     itm->setText(0,name);
     itm->setText(1,description);
     parent->addChild(itm);

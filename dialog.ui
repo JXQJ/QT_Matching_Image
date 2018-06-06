@@ -136,6 +136,16 @@
      <bool>false</bool>
     </property>
    </widget>
+   <widget class="QComboBox" name="correlation_methode">
+    <property name="geometry">
+     <rect>
+      <x>160</x>
+      <y>90</y>
+      <width>181</width>
+      <height>22</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QGroupBox" name="groupBox_2">
    <property name="geometry">
@@ -154,7 +164,7 @@
      <rect>
       <x>20</x>
       <y>20</y>
-      <width>491</width>
+      <width>731</width>
       <height>192</height>
      </rect>
     </property>
