@@ -31,7 +31,7 @@ class Dialog : public QDialog
 {
     Q_OBJECT
 
-    void AddRoot(QString name,QString description,int choice);
+    void AddRoot(QString name,QString description,int index);
     void AddChild(QTreeWidgetItem *parent,QString name,QString description);
 
 public:

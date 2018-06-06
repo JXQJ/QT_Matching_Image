@@ -132,17 +132,14 @@ void Dialog::correlation()
      int minW =min(crop.size().width,image2.size().width);
      int minH =min(crop.size().height,image2.size().height);
 
-       cv::Rect roi;
-         roi.x = 0;
-         roi.y = 0;
-         roi.width = minW;
-         roi.height = minH;
-         QString str = QString::number(minH);
-         AddRoot("minH",str,0);
-         str = QString::number(minW);
-         AddRoot("minW",str,0);
+     cv::Rect roi;
+     roi.x = 0;
+     roi.y = 0;
+     roi.width = minW;
+     roi.height = minH;
      newCrop = crop(roi);
      newImg2 = image2(roi);
+
      cv::matchTemplate(newCrop, newImg2, corr, cv::TM_CCORR_NORMED);
      correl = corr.at<float>(0,0);  // corr only has one pixel
 
@@ -151,64 +148,67 @@ void Dialog::MatchingMethod( int, void* )
 {
       img = image.clone();
       templ = image2.clone();
-
       Mat img_display;
       img.copyTo( img_display );
-      int result_cols =  img.cols - templ.cols + 1;
-      int result_rows = img.rows - templ.rows + 1;
-      result.create( result_rows, result_cols, CV_32FC1 );
-      bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
-      if (use_mask && method_accepts_mask)
-      {
-          matchTemplate( img, templ, result, match_method, mask);
-      }
-      else
-        {
-          matchTemplate( img, templ, result, match_method);
-      }
-      normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
-      double minVal; double maxVal; Point minLoc; Point maxLoc;
-      Point matchLoc;
-      minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
-      if( match_method  == TM_SQDIFF || match_method == TM_SQDIFF_NORMED )
-      {
-          matchLoc = minLoc;
-      }
-      else
-      {
-          matchLoc = maxLoc;
-      }
+      while(1){
 
-      w[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
-      h[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
-      x[countMatch] = matchLoc.x;
-      y[countMatch++] = matchLoc.y;
+          int result_cols =  img.cols - templ.cols + 1;
+          int result_rows = img.rows - templ.rows + 1;
+          result.create( result_rows, result_cols, CV_32FC1 );
+          bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
+          if (use_mask && method_accepts_mask)
+          {
+              matchTemplate( img, templ, result, match_method, mask);
+          }
+          else
+            {
+              matchTemplate( img, templ, result, match_method);
+          }
+          normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
+          double minVal; double maxVal; Point minLoc; Point maxLoc;
+          Point matchLoc;
+          minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+          if( match_method  == TM_SQDIFF || match_method == TM_SQDIFF_NORMED )
+          {
+              matchLoc = minLoc;
+          }
+          else
+          {
+              matchLoc = maxLoc;
+          }
 
-        Rect roi;
-        roi.x = matchLoc.x;
-        roi.y =  matchLoc.y;
-        roi.width =  (matchLoc.x + templ.cols)-(matchLoc.x);
-        roi.height =  (matchLoc.x + templ.cols)-(matchLoc.x);
-        crop = img(roi);
+          w[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
+          h[countMatch] = (matchLoc.y + templ.rows)-(matchLoc.y);
+          x[countMatch] = matchLoc.x;
+          y[countMatch++] = matchLoc.y;
 
-        imshow("crop", crop);
-      correlation();
+          Rect roi;
+          roi.x = matchLoc.x;
+          roi.y =  matchLoc.y;
+          roi.width =  (matchLoc.x + templ.cols)-(matchLoc.x);
+          roi.height =  (matchLoc.y + templ.rows)-(matchLoc.y);
+          crop = img(roi);
 
-      if(correl>0.99){
-            rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
+          //imshow("crop", crop);
+          correlation();
+
+          if(correl>0.95){
+                rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
+          }
+          else
+          {
+               countMatch--;
+               return;
+          }
+
+          QPixmap imgIn = cvMatToQPixmap(img_display);
+          ui->label->setPixmap(imgIn);
+          ui->label->setScaledContents(true);
+          ui->label->show();
+
+          cv::rectangle( img, cv::Point2f(  x[countMatch-1], y[countMatch-1] ), cv::Point2f( matchLoc.x + templ.cols,  matchLoc.y + templ.rows), cv::Scalar( 255, 255, 255 ),CV_FILLED);
+          //imshow("Draw Image", img);
       }
-      else
-      {
-           QMessageBox::information(this,tr("not matching!"),tr("These picture don't have same OBJ."));
-           countMatch--;
-           return;
-      }
-
-      QPixmap imgIn = cvMatToQPixmap(img_display);
-      ui->label->setPixmap(imgIn);
-      ui->label->setScaledContents(true);
-      ui->label->show();
-      return;
 }
 void Dialog::on_btn_match_clicked()
 {
@@ -243,27 +243,32 @@ void Dialog::on_btn_match_clicked()
         MatchingMethod( 0, 0 );
         QString qstr = QString::number(correl);
 
-        AddRoot("Correlation",qstr,0);
-        AddRoot("Matching ", "1" ,1);
+        AddRoot("Correlation",qstr,-1);
+        for(int i=0;i<countMatch;i++)
+        {
+            QString str = QString::number(i+1);
+            AddRoot("Matching ", str ,i);
+        }
     }
 }
-void Dialog::AddRoot(QString name,QString description,int choice)
+void Dialog::AddRoot(QString name,QString description,int index)
 {
     QTreeWidgetItem *itm= new QTreeWidgetItem(ui->result);
     itm->setText(0,name);
     itm->setText(1,description);
     ui->result->addTopLevelItem(itm);
 
-    if(choice == 1)
+    if(index != -1)
     {
-       QString xstr = QString::number(x[0]);
-       QString ystr = QString::number(y[0]);
+       QString xstr = QString::number(x[index]);
+       QString ystr = QString::number(y[index]);
+       QString wstr = QString::number(w[index]);
+       QString hstr = QString::number(h[index]);
+
        AddChild(itm,"X",xstr);
        AddChild(itm,"Y",ystr);
-       xstr = QString::number(w[0]);
-       ystr = QString::number(h[0]);
-       AddChild(itm,"width",xstr);
-       AddChild(itm,"height",ystr);
+       AddChild(itm,"Width",wstr);
+       AddChild(itm,"Height",hstr);
     }
 }
 void Dialog::AddChild(QTreeWidgetItem *parent,QString name,QString description)
