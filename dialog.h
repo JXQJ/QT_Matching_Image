@@ -12,6 +12,7 @@
 #include <Qtcore>
 #include <QtGui>
 #include <QTreeWidgetItem>
+#include <algorithm>
 
 //--------------------------------------------- OpenCV
 #include <opencv2/core/core.hpp>
@@ -56,10 +57,10 @@ private:
 
     cv::Mat image,image2;
     int chkImage1=0,chkImage2=0;
-    double correl,flagMatch=0;
+    double correl = -1;
 
     bool use_mask;
-    cv::Mat img,templ,mask,result;
+    cv::Mat img,templ,mask,result,crop;
     const char* image_window = "Source Image";
     const char* result_window = "Result window";
     const std::string file1,file2;

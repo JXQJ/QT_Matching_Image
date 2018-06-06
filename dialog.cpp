@@ -4,6 +4,7 @@
 #include <Qtcore>
 #include <QtGui>
 #include <QFileDialog>
+#include <algorithm>
 
 using namespace cv;
 
@@ -126,24 +127,31 @@ int max_Trackbar = 5;
 void Dialog::correlation()
 {
 
-     img = image.clone();
-     templ = image2.clone();
-
-     MatchingMethod( 0, 0 );
-
      cv::Mat corr;
-     if(ui->correlation_methode->currentIndex()==0)
-     {
-         cv::matchTemplate(image, image2, corr, cv::TM_SQDIFF);
-     }
-     else if(ui->correlation_methode->currentIndex()==3)
-     {
-         cv::matchTemplate(image, image2, corr, cv::TM_CCORR_NORMED);
-     }
+     Mat newCrop,newImg2;
+     int minW =min(crop.size().width,image2.size().width);
+     int minH =min(crop.size().height,image2.size().height);
+
+       cv::Rect roi;
+         roi.x = 0;
+         roi.y = 0;
+         roi.width = minW;
+         roi.height = minH;
+         QString str = QString::number(minH);
+         AddRoot("minH",str,0);
+         str = QString::number(minW);
+         AddRoot("minW",str,0);
+     newCrop = crop(roi);
+     newImg2 = image2(roi);
+     cv::matchTemplate(newCrop, newImg2, corr, cv::TM_CCORR_NORMED);
      correl = corr.at<float>(0,0);  // corr only has one pixel
+
 }
 void Dialog::MatchingMethod( int, void* )
 {
+      img = image.clone();
+      templ = image2.clone();
+
       Mat img_display;
       img.copyTo( img_display );
       int result_cols =  img.cols - templ.cols + 1;
@@ -170,18 +178,36 @@ void Dialog::MatchingMethod( int, void* )
       {
           matchLoc = maxLoc;
       }
-      rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
 
       w[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
       h[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
       x[countMatch] = matchLoc.x;
       y[countMatch++] = matchLoc.y;
 
+        Rect roi;
+        roi.x = matchLoc.x;
+        roi.y =  matchLoc.y;
+        roi.width =  (matchLoc.x + templ.cols)-(matchLoc.x);
+        roi.height =  (matchLoc.x + templ.cols)-(matchLoc.x);
+        crop = img(roi);
+
+        imshow("crop", crop);
+      correlation();
+
+      if(correl>0.99){
+            rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
+      }
+      else
+      {
+           QMessageBox::information(this,tr("not matching!"),tr("These picture don't have same OBJ."));
+           countMatch--;
+           return;
+      }
+
       QPixmap imgIn = cvMatToQPixmap(img_display);
       ui->label->setPixmap(imgIn);
       ui->label->setScaledContents(true);
       ui->label->show();
-
       return;
 }
 void Dialog::on_btn_match_clicked()
@@ -214,7 +240,7 @@ void Dialog::on_btn_match_clicked()
     else if(ui->chk_correlation->isChecked())
     {
 
-        correlation();
+        MatchingMethod( 0, 0 );
         QString qstr = QString::number(correl);
 
         AddRoot("Correlation",qstr,0);
