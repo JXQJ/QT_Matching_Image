@@ -50,10 +50,13 @@ private slots:
 
     void on_correlation_methode_currentIndexChanged(const QString &arg1);
 
+    void on_btn_match_2_clicked();
+
 private:
     Ui::Dialog *ui;
 
     void MatchingMethod( int, void* );
+    void MatchingMethod2();
     void updateImage1();
     void updateImage2();
     void correlation();
@@ -63,15 +66,13 @@ private:
     int chkImage1=0,chkImage2=0;
     double correl = -1;
 
-    bool use_mask;
-    cv::Mat img,templ,mask,result,crop,img_display;
-    const char* image_window = "Source Image";
-    const char* result_window = "Result window";
+   // bool use_mask;
+    cv::Mat img,templ,result,crop,img_display;
     const std::string file1,file2;
 
     int countMatch = 0;
     int match_method = 0;
-    int x[50],y[50],w[50],h[50];
+    int x[50],y[50],w[50],h[50],a[50];
     double correlD[50],inputCorrel=0.5;
 
 

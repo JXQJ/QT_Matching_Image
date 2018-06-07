@@ -178,40 +178,121 @@ void Dialog::correlation()
      correl = corr.at<float>(0,0);  // corr only has one pixel
 
 }
-void Dialog::MatchingMethod( int, void* )
+void Dialog::on_btn_match_2_clicked()
+{
+    Mat imgSlide;
+    int wSlide=min(image2.cols,image2.rows);
+    Rect roi2;
+    roi2.x = 96;
+    roi2.y = 81;
+    roi2.width = wSlide;
+    roi2.height = wSlide;
+    imgSlide = image(roi2);
+    imshow("Before Rotate",  imgSlide);
+
+    int maxWH = max(imgSlide.cols,imgSlide.rows);
+    Point2f pc(maxWH/2., maxWH/2.);
+    Mat r = getRotationMatrix2D(pc, 90, 1.0);
+    warpAffine(imgSlide, imgSlide ,r, imgSlide.size());
+
+    imshow("Rotate",  imgSlide);
+}
+void Dialog::MatchingMethod2()
 {
     img = image.clone();
     imageOri.copyTo( img_display );
+    Mat clearImg;
+    Mat imgSlide,corr;
+    int rangeSlide = 5;
+
+    int wSlide=min(image2.cols,image2.rows);
+
+    Rect roi;
+    roi.width = wSlide;
+    roi.height = wSlide;
+
+    Rect roi2;
+    roi2.x = 0;
+    roi2.y = 0;
+    roi2.width = wSlide;
+    roi2.height = wSlide;
+    templ = image2(roi2);
+
+    clearImg = image.clone();
+     for(int angle=0;angle<=360;angle+=90) // rotate
+    {
+
+        for(int ySlide=1;ySlide+wSlide<image.rows;ySlide+=rangeSlide)    // y
+        {
+            roi.y =  ySlide;
+            for(int xSlide=1;xSlide+wSlide<image.cols;xSlide+=rangeSlide)  //x
+            {
+                roi.x =  xSlide;
+                img = clearImg.clone();
+                imgSlide = img(roi);
+
+               // if(xSlide==96 && ySlide==81)imshow("Before Rotate",  imgSlide);
+
+                int maxWH = max(imgSlide.cols,imgSlide.rows);
+                Point2f pc(maxWH/2., maxWH/2.);
+                Mat r = getRotationMatrix2D(pc, angle, 1.0);
+                warpAffine(imgSlide, imgSlide ,r, imgSlide.size());
+
+               // if(xSlide==96 && ySlide==81)imshow("Rotate",  imgSlide);
+
+
+                matchTemplate(imgSlide, templ, corr, TM_CCORR_NORMED);
+                correl = corr.at<float>(0,0);  // corr only has one pixel
+
+                if(correl>inputCorrel){
+                       rectangle( img_display,Point( xSlide , ySlide ),Point( xSlide+wSlide , ySlide+wSlide ), Scalar(255, 0 ,0));
+                       rectangle( img,Point( xSlide , ySlide ),Point( xSlide+wSlide , ySlide+wSlide ), Scalar(255, 0 ,0),CV_FILLED);
+                       clearImg = img.clone();
+                       w[countMatch] = h[countMatch]= wSlide;
+                       x[countMatch] = xSlide;
+                       y[countMatch] = ySlide;
+                       //a[countMatch] = angle;
+                       correlD[countMatch++]=correl;
+                       xSlide+=wSlide;
+                }
+            }
+
+        }
+    }
+    QPixmap imgIn = cvMatToQPixmap(img_display);
+    ui->label->setPixmap(imgIn);
+    ui->label->setAlignment(Qt::AlignCenter);
+    ui->label->show();
+}
+void Dialog::MatchingMethod( int, void* )
+{
+
+    img = image.clone();
+    imageOri.copyTo( img_display );
    //img.copyTo( img_display );
+     for(int i=0;i<=90;){
 
-   // for(int i=0;i<=90;){
-
-          int maxWH = max(image2.cols,image2.rows);
-          templ=image2.clone();
-          templ.setTo(cv::Scalar(255,255,255));
-         // imshow("Templ Img", templ);
+          img = image.clone();
+          int maxWH = max(img.cols,img.rows);
+          imshow("Templ Img", img);
           Point2f pc(maxWH/2., maxWH/2.);
-          Mat r = cv::getRotationMatrix2D(pc, 0, 1.0);
-          warpAffine(image2, templ, r, image2.size());
-        //  imshow("Rotate Img", templ);
-
+          int a = i;
+          if(a>0)a=-a;
+          Mat r = cv::getRotationMatrix2D(pc, a, 1.0);
+          warpAffine(img, img, r, img.size());
+          imshow("Rotate Img", img);
+          templ = image2.clone();
           while(1){
 
               int result_cols =  img.cols - templ.cols + 1;
               int result_rows = img.rows - templ.rows + 1;
-              result.create( result_rows, result_cols, CV_32FC1 );
-              bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
-              if (use_mask && method_accepts_mask)
-              {
-                  matchTemplate( img, templ, result, match_method, mask);
-              }
-              else
-              {
-                  matchTemplate( img, templ, result, match_method);
-              }
+              result.create( result_rows, result_cols, CV_32FC1 );              
+              matchTemplate( img, templ, result, match_method);
               normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
+
               double minVal; double maxVal; Point minLoc; Point maxLoc;
               Point matchLoc;
+
               minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
               if( match_method  == TM_SQDIFF || match_method == TM_SQDIFF_NORMED )
               {
@@ -238,7 +319,7 @@ void Dialog::MatchingMethod( int, void* )
               imshow("Result", result);
               correlation();
 
-              if(correl>0.97){
+              if(correl>inputCorrel){
                     rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
                     correlD[countMatch-1]=correl;
               }
@@ -249,17 +330,16 @@ void Dialog::MatchingMethod( int, void* )
                   break;
               }
 
-              QPixmap imgIn = cvMatToQPixmap(img_display);
-              ui->label->setPixmap(imgIn);
-             // ui->label->setScaledContents(true);
-              ui->label->setAlignment(Qt::AlignCenter);
-              ui->label->show();
-
               cv::rectangle( img, cv::Point2f(  x[countMatch-1], y[countMatch-1] ), cv::Point2f( matchLoc.x + templ.cols,  matchLoc.y + templ.rows), cv::Scalar( 255, 255, 255 ),CV_FILLED);
               //imshow("Draw Image", img);
           }
-       // i+=90;
-   // }
+        i+=90;
+    }
+          QPixmap imgIn = cvMatToQPixmap(img_display);
+          ui->label->setPixmap(imgIn);
+         // ui->label->setScaledContents(true);
+          ui->label->setAlignment(Qt::AlignCenter);
+          ui->label->show();
 
 }
 void Dialog::on_btn_match_clicked()
@@ -305,17 +385,21 @@ void Dialog::on_btn_match_clicked()
     }
     else if(ui->chk_correlation->isChecked())
     {
-
-        MatchingMethod( 0, 0 );
-        QString qstr = QString::number(correl);
-
+        MatchingMethod2();
+       // MatchingMethod( 0, 0 );
+        if(countMatch==0)
+            AddRoot("Not match! ", "0" ,-1);
+        else
+        {
+            QString c = QString::number(countMatch);
+            AddRoot("Found match picture", c ,-1);
+        }
         for(int i=0;i<countMatch;i++)
         {
             QString str = QString::number(i+1);
             AddRoot("Matching ", str ,i);
         }
-        if(countMatch==0)
-            AddRoot("Not match! ", "0" ,-1);
+
     }
 }
 void Dialog::AddRoot(QString name,QString description,int index)
@@ -362,3 +446,5 @@ void Dialog::on_correlation_methode_currentIndexChanged(const QString &arg1)
 {
     match_method = ui->correlation_methode->currentIndex();
 }
+
+
