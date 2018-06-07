@@ -46,6 +46,10 @@ private slots:
 
     void on_btn_match_clicked();
 
+    void on_view_clicked();
+
+    void on_correlation_methode_currentIndexChanged(const QString &arg1);
+
 private:
     Ui::Dialog *ui;
 
@@ -55,17 +59,18 @@ private:
     void correlation();
 
 
-    cv::Mat image,image2;
+    cv::Mat image,image2,imageOri;
     int chkImage1=0,chkImage2=0;
     double correl = -1;
 
     bool use_mask;
-    cv::Mat img,templ,mask,result,crop;
+    cv::Mat img,templ,mask,result,crop,img_display;
     const char* image_window = "Source Image";
     const char* result_window = "Result window";
     const std::string file1,file2;
 
     int countMatch = 0;
+    int match_method = 0;
     int x[50],y[50],w[50],h[50];
     double correlD[50],inputCorrel=0.5;
 

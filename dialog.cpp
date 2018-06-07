@@ -73,14 +73,15 @@ void Dialog::updateImage1()
 {
     QPixmap imgIn = cvMatToQPixmap(image);
     ui->label->setPixmap(imgIn);
-    ui->label->setScaledContents(true);
+    ui->label->setAlignment(Qt::AlignCenter);
     ui->label->show();
 }
 void Dialog::updateImage2()
 {
     QPixmap imgIn = cvMatToQPixmap(image2);
     ui->label2->setPixmap(imgIn);
-    ui->label2->setScaledContents(true);
+    //ui->label2->setScaledContents(true);
+    ui->label2->setAlignment(Qt::AlignCenter);
     ui->label2->show();
 }
 Dialog::~Dialog()
@@ -98,6 +99,9 @@ void Dialog::on_btn_load_clicked()
     );
    std::string file1 = filename.toStdString();
    image = imread(file1, 1);
+   image.copyTo( img_display );
+   image.copyTo(  imageOri );
+   image = imread(file1, 0);
    updateImage1();
    if(file1=="")
         chkImage1 = 0;
@@ -117,17 +121,42 @@ void Dialog::on_btn_load2_clicked()
                     "All file (*.*);;JPEG(*.jpg);;Bitmap(*.bmp);;PNG(*.png)"
         );
        std::string file2 = filename.toStdString();
-       image2 = imread(file2, 1);
-       updateImage2();
+       image2 = imread(file2, 0);
        if(file2=="")
             chkImage2 = 0;
        else chkImage2 = 1;
     }
+    else if(ui->chk_crop->isChecked())
+    {
+        if(chkImage1==1)
+        {
+            QString tx=ui->tx->text();
+            QString ty=ui->ty->text();
+            QString bx=ui->bx->text();
+            QString by=ui->by->text();
+
+            Rect roi;
+            roi.x = tx.toInt();
+            roi.y =  ty.toInt();
+            roi.width =  (bx.toInt())-(tx.toInt());
+            roi.height = (by.toInt())-(ty.toInt());
+            image2 = image(roi);
+
+           /* QString str = QString::number(roi.x);
+            AddRoot("X",str,-1);*/
+
+            chkImage2 = 1;
+        }
+        else
+        {
+             QMessageBox::information(this,tr("Error!"),tr("Please select input image before."));
+        }
+
+    }
+     updateImage2();
+
 }
 
-
-int match_method;
-int max_Trackbar = 5;
 
 void Dialog::correlation()
 {
@@ -151,71 +180,87 @@ void Dialog::correlation()
 }
 void Dialog::MatchingMethod( int, void* )
 {
-      img = image.clone();
-      templ = image2.clone();
-      Mat img_display;
-      img.copyTo( img_display );
-      while(1){
+    img = image.clone();
+    imageOri.copyTo( img_display );
+   //img.copyTo( img_display );
 
-          int result_cols =  img.cols - templ.cols + 1;
-          int result_rows = img.rows - templ.rows + 1;
-          result.create( result_rows, result_cols, CV_32FC1 );
-          bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
-          if (use_mask && method_accepts_mask)
-          {
-              matchTemplate( img, templ, result, match_method, mask);
+   // for(int i=0;i<=90;){
+
+          int maxWH = max(image2.cols,image2.rows);
+          templ=image2.clone();
+          templ.setTo(cv::Scalar(255,255,255));
+         // imshow("Templ Img", templ);
+          Point2f pc(maxWH/2., maxWH/2.);
+          Mat r = cv::getRotationMatrix2D(pc, 0, 1.0);
+          warpAffine(image2, templ, r, image2.size());
+        //  imshow("Rotate Img", templ);
+
+          while(1){
+
+              int result_cols =  img.cols - templ.cols + 1;
+              int result_rows = img.rows - templ.rows + 1;
+              result.create( result_rows, result_cols, CV_32FC1 );
+              bool method_accepts_mask = (CV_TM_SQDIFF == match_method || match_method == CV_TM_CCORR_NORMED);
+              if (use_mask && method_accepts_mask)
+              {
+                  matchTemplate( img, templ, result, match_method, mask);
+              }
+              else
+              {
+                  matchTemplate( img, templ, result, match_method);
+              }
+              normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
+              double minVal; double maxVal; Point minLoc; Point maxLoc;
+              Point matchLoc;
+              minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
+              if( match_method  == TM_SQDIFF || match_method == TM_SQDIFF_NORMED )
+              {
+                   matchLoc = minLoc;
+              }
+              else
+              {
+                  matchLoc = maxLoc;
+              }
+
+              w[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
+              h[countMatch] = (matchLoc.y + templ.rows)-(matchLoc.y);
+              x[countMatch] = matchLoc.x;
+              y[countMatch++] = matchLoc.y;
+
+              Rect roi;
+              roi.x = matchLoc.x;
+              roi.y =  matchLoc.y;
+              roi.width =  templ.cols;
+              roi.height = templ.rows;
+
+              crop = img(roi);
+
+              imshow("Result", result);
+              correlation();
+
+              if(correl>0.97){
+                    rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
+                    correlD[countMatch-1]=correl;
+              }
+              else
+              {
+
+                  countMatch--;
+                  break;
+              }
+
+              QPixmap imgIn = cvMatToQPixmap(img_display);
+              ui->label->setPixmap(imgIn);
+             // ui->label->setScaledContents(true);
+              ui->label->setAlignment(Qt::AlignCenter);
+              ui->label->show();
+
+              cv::rectangle( img, cv::Point2f(  x[countMatch-1], y[countMatch-1] ), cv::Point2f( matchLoc.x + templ.cols,  matchLoc.y + templ.rows), cv::Scalar( 255, 255, 255 ),CV_FILLED);
+              //imshow("Draw Image", img);
           }
-          else
-            {
-              matchTemplate( img, templ, result, match_method);
-          }
-          normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
-          double minVal; double maxVal; Point minLoc; Point maxLoc;
-          Point matchLoc;
-          minMaxLoc( result, &minVal, &maxVal, &minLoc, &maxLoc, Mat() );
-          if( match_method  == TM_SQDIFF || match_method == TM_SQDIFF_NORMED )
-          {
-              matchLoc = minLoc;
-          }
-          else
-          {
-              matchLoc = maxLoc;
-          }
+       // i+=90;
+   // }
 
-          w[countMatch] = (matchLoc.x + templ.cols)-(matchLoc.x);
-          h[countMatch] = (matchLoc.y + templ.rows)-(matchLoc.y);
-          x[countMatch] = matchLoc.x;
-          y[countMatch++] = matchLoc.y;
-
-          Rect roi;
-          roi.x = matchLoc.x;
-          roi.y =  matchLoc.y;
-          roi.width =  (matchLoc.x + templ.cols)-(matchLoc.x);
-          roi.height =  (matchLoc.y + templ.rows)-(matchLoc.y);
-          crop = img(roi);
-
-          //imshow("crop", crop);
-          correlation();
-
-          if(correl>0.97){
-                rectangle( img_display, matchLoc, Point( matchLoc.x + templ.cols , matchLoc.y + templ.rows ), Scalar(255, 0 ,0), 2, 8, 0 );
-                correlD[countMatch-1]=correl;
-          }
-          else
-          {
-
-               countMatch--;
-               return;
-          }
-
-          QPixmap imgIn = cvMatToQPixmap(img_display);
-          ui->label->setPixmap(imgIn);
-          ui->label->setScaledContents(true);
-          ui->label->show();
-
-          cv::rectangle( img, cv::Point2f(  x[countMatch-1], y[countMatch-1] ), cv::Point2f( matchLoc.x + templ.cols,  matchLoc.y + templ.rows), cv::Scalar( 255, 255, 255 ),CV_FILLED);
-          //imshow("Draw Image", img);
-      }
 }
 void Dialog::on_btn_match_clicked()
 {
@@ -264,14 +309,13 @@ void Dialog::on_btn_match_clicked()
         MatchingMethod( 0, 0 );
         QString qstr = QString::number(correl);
 
-
         for(int i=0;i<countMatch;i++)
         {
             QString str = QString::number(i+1);
             AddRoot("Matching ", str ,i);
         }
         if(countMatch==0)
-             AddRoot("Not match! ", "0" ,-1);
+            AddRoot("Not match! ", "0" ,-1);
     }
 }
 void Dialog::AddRoot(QString name,QString description,int index)
@@ -302,4 +346,19 @@ void Dialog::AddChild(QTreeWidgetItem *parent,QString name,QString description)
     itm->setText(0,name);
     itm->setText(1,description);
     parent->addChild(itm);
+}
+
+void Dialog::on_view_clicked()
+{
+    if(chkImage1 == 1)
+       imshow("Input image",img_display);
+    else
+    {
+         QMessageBox::information(this,tr("Error!"),tr("Please select input image before."));
+    }
+}
+
+void Dialog::on_correlation_methode_currentIndexChanged(const QString &arg1)
+{
+    match_method = ui->correlation_methode->currentIndex();
 }
