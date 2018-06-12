@@ -72,6 +72,8 @@ private slots:
     void mouseMoveEvent(QMouseEvent *ev);
     void mouseReleaseEvent(QMouseEvent *ev);
 
+    void on_result_itemPressed(QTreeWidgetItem *item, int column);
+
 private:
     Ui::matchImage *ui;
 
@@ -105,6 +107,9 @@ private:
     QPixmap imagePaintCrop;
 
     int brightness;
+    int selectMatchIndex;
+
+    cv::Mat tempImageDisplay;
 };
 
 #endif // MATCHIMAGE_H

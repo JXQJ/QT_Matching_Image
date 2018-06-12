@@ -292,6 +292,11 @@ void matchImage::on_btn_match1_clicked()
             QMessageBox::information(this,tr("Can not matching!"),tr("Please input coefficeint more than 0.5!"));
             return;
     }
+    if(intput.toDouble()>1)
+    {
+            QMessageBox::information(this,tr("Can not matching!"),tr("Please input coefficeint less than equal 1."));
+            return;
+    }
     //-------------------------------------------Clear old UI source image--------------------------------------------------
     ui->result->clear();
     updateImage(imageSrc,1);
@@ -337,6 +342,7 @@ void matchImage::on_btn_match1_clicked()
         QString str = QString::number(i+1);
         AddRoot("Matching ", str ,i);
     }
+    tempImageDisplay = imageDisplay.clone();
 
 }
 void matchImage::matchingImage(int medthode)
@@ -693,4 +699,20 @@ int  matchImage::isHasLabel(int *label, int count,int dt)
 
     }
     return -1;
+}
+
+void matchImage::on_result_itemPressed(QTreeWidgetItem *item, int column)
+{
+    int i = ui->result->indexOfTopLevelItem(item);
+    selectMatchIndex = i;
+    imageDisplay = tempImageDisplay.clone();
+    if(selectMatchIndex!=0)
+    {
+        int xToDraw = xDis[selectMatchIndex-1];
+        int yToDraw = yDis[selectMatchIndex-1];
+        rectangle( imageDisplay ,Point( xToDraw, yToDraw ),Point( xToDraw+wTemp-1 , yToDraw+hTemp-1), Scalar(0, 0 ,255),2);
+        updateImage(imageDisplay,1);
+    }
+
+
 }
