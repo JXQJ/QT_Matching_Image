@@ -52,7 +52,101 @@ matchImage::~matchImage()
 {
     delete ui;
 }
+void matchImage::mousePressEvent(QMouseEvent *ev)
+{
+    if(ui->chk_crop->isChecked())
+    {
+        QPixmap imgIn = cvMatToQPixmap(imageSrc);
+        ui->viewImage1->setPixmap(imgIn );
+        ui->viewImage1->setAlignment(Qt::AlignCenter);
 
+        int dis_x = ( ui->viewImage1->width() - ui->viewImage1->pixmap()->width() ) / 2;
+        int dis_y = ( ui->viewImage1->height() - ui->viewImage1->pixmap()->height() ) / 2;
+        int x = ev->pos().x() - ui->viewImage1->pos().x() - dis_x;
+        int y = ev->pos().y() - ui->viewImage1->pos().y() - dis_y;
+        if( x < 0 || y < 0 ||x > ui->viewImage1->width() ||y > ui->viewImage1->height() )
+        {
+            //ui->mouse_pos_pr->setText("out of bound");
+        }
+        else
+        {
+            //ui->mouse_pos_pr->setText(QString("(%1, %2)").arg(x).arg(y));
+            pos_begin.x = x;
+            pos_begin.y = y;
+
+        }
+    }
+}
+void matchImage::mouseMoveEvent(QMouseEvent *ev)
+{
+    if(ui->chk_crop->isChecked())
+    {
+        QPixmap imgIn = cvMatToQPixmap(imageSrc);
+        ui->viewImage1->setPixmap(imgIn);
+        ui->viewImage1->setAlignment(Qt::AlignCenter);
+        imagePaintCrop  =  imgIn;
+        int dis_x = ( ui->viewImage1->width() - ui->viewImage1->pixmap()->width() ) / 2;
+        int dis_y = ( ui->viewImage1->height() - ui->viewImage1->pixmap()->height() ) / 2;
+        int x = ev->pos().x() - ui->viewImage1->pos().x() - dis_x;
+        int y = ev->pos().y() - ui->viewImage1->pos().y() - dis_y;
+
+        if( x < 0 || y < 0 ||x > ui->viewImage1->pixmap()->width() ||y > ui->viewImage1->pixmap()->height() )
+        {
+            //ui->mouse_pos_mv->setText("out of bound");
+        }
+        else
+        {
+            //ui->mouse_pos_mv->setText(QString("(%1, %2)").arg(x).arg(y));
+
+            QRect rec(pos_begin.x,pos_begin.y
+                      ,x - pos_begin.x
+                      ,y - pos_begin.y);
+            qDebug() << "(" << pos_begin.x << "," << pos_begin.y << ")";
+            qDebug() << "w : " << x - pos_begin.x << " h : " << y - pos_begin.y;
+
+            QPainter *paint = new QPainter(&imagePaintCrop);
+            paint->setPen(QColor(255,34,255,255));
+            paint->drawRect(rec);
+            delete paint;
+            ui->viewImage1->setPixmap(imagePaintCrop);
+            ui->viewImage1->setAlignment(Qt::AlignCenter);
+        }
+    }
+}
+void matchImage::mouseReleaseEvent(QMouseEvent *ev)
+{
+
+    if(ui->chk_crop->isChecked())
+    {
+        int dis_x = ( ui->viewImage1->width() - ui->viewImage1->pixmap()->width() ) / 2;
+        int dis_y = ( ui->viewImage1->height() - ui->viewImage1->pixmap()->height() ) / 2;
+        int x = ev->pos().x() - ui->viewImage1->pos().x() - dis_x;
+        int y = ev->pos().y() - ui->viewImage1->pos().y() - dis_y;
+
+        if( x < 0 || y < 0 ||x > ui->viewImage1->pixmap()->width() ||y > ui->viewImage1->pixmap()->height() )
+        {
+            //ui->mouse_pos_re->setText("out of bound");
+        }
+        else
+        {
+          //  ui->mouse_pos_re->setText(QString("(%1, %2)").arg(x).arg(y));
+            pos_end.x = x;
+            pos_end.y = y;
+
+            QRect rec(pos_begin.x,pos_begin.y,pos_end.x - pos_begin.x,pos_end.y - pos_begin.y);
+            qDebug() << "(" << pos_begin.x << "," << pos_begin.y << ")";
+            qDebug() << "w : " << pos_end.x - pos_begin.x << " h : " << pos_end.y - pos_begin.y;
+
+            QPainter *paint = new QPainter(&imagePaintCrop);
+            paint->setPen(QColor(255,34,255,255));
+            paint->drawRect(rec);
+            delete paint;
+            ui->viewImage1->setPixmap(imagePaintCrop);
+            ui->viewImage1->setAlignment(Qt::AlignCenter);
+        }
+    }
+
+}
 void matchImage::updateImage(Mat img,int viewImage)
 {
     // Change Mat image to Qpixmap image
@@ -145,18 +239,15 @@ void matchImage::on_btn_load2_clicked()
         //---------------------------- Select Crop Image From Source Image --------------------------------------
         if(chkImage1==1)
         {
-            QString tx=ui->tx->text();
-            QString ty=ui->ty->text();
-            QString bx=ui->bx->text();
-            QString by=ui->by->text();
+            int x = std::min(pos_begin.x,pos_end.x);
+            int y = std::min(pos_begin.y,pos_end.y);
+            int w = std::max(pos_begin.x,pos_end.x) - std::min(pos_begin.x,pos_end.x);
+            int h = std::max(pos_begin.y,pos_end.y) - std::min(pos_begin.y,pos_end.y);
+            Rect rec(x,y,w,h);
+            imageTemp  =  imageSrc (rec);
 
-            Rect roi;
-            roi.x = tx.toInt();
-            roi.y =  ty.toInt();
-            roi.width =  (bx.toInt())-(tx.toInt());
-            roi.height = (by.toInt())-(ty.toInt());
 
-            imageTemp = imageSrc(roi);
+            updateImage(imageSrc,1);
             updateImage(imageTemp,2);
 
             chkImage2 = 1;
@@ -200,73 +291,39 @@ void matchImage::on_btn_match1_clicked()
             QMessageBox::information(this,tr("Can not matching!"),tr("Please input coefficeint more than 0.5!"));
             return;
     }
-    //-------------------------------------------------------------------------------------------------------------------
-
-    inputCorrel = intput.toDouble();
-    QString str = QString::number(inputCorrel);
-
+    //-------------------------------------------Clear old UI source image--------------------------------------------------
     ui->result->clear();
     updateImage(imageSrc,1);
 
-    //---------------------------------------------Resize Image---------------------------------------------------------
+    //---------------------------------------------Resize Image------------------------------------------------------------
     if(wSrc>=500)
         resizeImageFn(1,0.5);
     else
         resizeImageFn(0,0);
-    //------------------------------------------------------------------------------------------------------------------
-    findInterestedLocation();
-}
 
-void matchImage::on_btn_openResult_clicked()
-{
-    //-----------------------------Open & Select Result Image ---------------------------------------
-    QString filename = QFileDialog::getOpenFileName(
-                    this,
-                    tr("Open File"),
-                    "D://Internship/MatchCorrelAndShape/Picture",                        //---------**your picture path
-                    "All file (*.*);;JPEG(*.jpg);;Bitmap(*.bmp);;PNG(*.png)"
-     );
-     std::string file3 = filename.toStdString();
-     imageResult = imread(file3, 0);
-     updateImage(imageResult,3);
-     if(file3=="")
-     {
-         chkImage3 = 0;
-     }
-     else
-     {
-         chkImage3 = 1;
-         row = imageResult.rows;
-         col = imageResult.cols;
-         hResult = col;
-         wResult = row;
-     }
-}
-void matchImage::on_btn_match2_clicked()
-{
-    if(checkFind == 0)
-    {
-        QMessageBox::information(this,tr("Can not matching!"),tr("Please find interested location before!"));
-        return;
-    }
-    if(chkImage3 == 0)
-    {
-        QMessageBox::information(this,tr("Can not matching!"),tr("Please select result image!"));
-        return;
-    }
-    checkFind = 0;
-    //-----------------------------------Labeling Location-----------------------------------------
+    //------------------------------------------Find Interested Location--------------------------------------------------
+
+    findInterestedLocation();
+
+    //--------------------------------------------Input Correlretion-----------------------------------------------------
+
+    inputCorrel = intput.toDouble();
+    QString str = QString::number(inputCorrel);
+
+    //-------------------------------------------Labeling Location------------------------------------------------------
+
     labelingLocation();
-    //------------------------------------- Show Result --------------------------------------------
+
+    //------------------------------------------Go to match medthode-----------------------------------------------------
     if(ui->chk_shape->isChecked())
     {
          matchingImage(0);
     }
     else if(ui->chk_correlation->isChecked())
     {
-
-
+         matchingImage(1);
     }
+    //---------------------------------------------- Show Result ------------------------------------------------------
     if(countMatch==0)
         AddRoot("Not match! ", "0" ,-1);
     else
@@ -279,18 +336,23 @@ void matchImage::on_btn_match2_clicked()
         QString str = QString::number(i+1);
         AddRoot("Matching ", str ,i);
     }
+
 }
 void matchImage::matchingImage(int medthode)
 {
+    countMatch = 0;
     firstShapeBase=0;
     int wSlide= min(wTemp,hTemp);
     testM = 0;
-    /*Rect roi2;
+    ui->result->clear();
+    imageDisplay = imageOri.clone();
+
+    Rect roi2;
     roi2.x = 0;
     roi2.y = 0;
     roi2.width = wSlide;
     roi2.height = wSlide;
-    imageTemp  =  imageTemp (roi2);*/
+    imageTemp2  =  imageTemp (roi2);
 
     Rect roi;
     roi.width = wSlide;
@@ -319,40 +381,35 @@ void matchImage::matchingImage(int medthode)
                     roi.x = incX;
                     roi.y = incY;
 
-                    cropChkImg = imageSrc(roi);
-                    //if(xx==0)
-                    if(testM<5)
+                    if(medthode==0)  // Shape-Base Match
                     {
+                        cropChkImg = imageSrc(roi);
                         shapeBaseMatch(cropChkImg,imageTemp,imageDisplay);
-                        if(xx==1)  // Match
-                        {
-                             printf("Match) X:%d  Y:%d\n",incX,incY);
-                             int c = component[indexComponent];
-                             int countCom2=0;
-                             for (int x = 0; x < row; x++)
+                    }
+                    else if(medthode==1) // Correlation Match
+                    {
+                        Mat imgSrcRotate = imageSrc.clone();
+                        cropChkImg = imgSrcRotate(roi);
+                        correlationMatch(cropChkImg,imageTemp2,imageDisplay);
+                    }
+                    if(xx==1)  // If find OBJ, Clear these labeling.
+                    {
+                         printf("Match) X:%d  Y:%d\n",incX,incY);
+                         int c = component[indexComponent];
+                         int countCom2=0;
+                         for (int x = 0; x < row; x++)
+                          {
+                              for (int y = 0; y < col; y++,countCom2++)
                               {
-                                  for (int y = 0; y < col; y++,countCom2++)
-                                  {
-                                      if(component[countCom2]==c)component[countCom2]=0;
-                                  }
+                                  if(component[countCom2]==c)component[countCom2]=0;
                               }
-                             x+=newWTemp/2;
-                             xx=0;
-                        }
-                        if(xx==-1)  // Not Match
-                        {
-                            int c = component[indexComponent];
-                            int countCom2=0;
-                            for (int x = 0; x < row; x++)
-                             {
-                                 for (int y = 0; y < col; y++,countCom2++)
-                                 {
-                                     if(component[countCom2]==c)component[countCom2]=0;
-                                 }
-                             }
-                            xx=-1;
-                            x+=newWTemp/2;
-                        }
+                          }
+                         if(medthode==0)a[countMatch] = 0; // change;
+                         xDis[countMatch] = incX;
+                         yDis[countMatch] = incY;
+                         w[countMatch] = wSlide;
+                         h[countMatch++] = wSlide;
+                         x+=newWTemp/2;
                     }
                     count++;
                 }
@@ -362,6 +419,43 @@ void matchImage::matchingImage(int medthode)
     printf("Count %d\n ",count);
     updateImage(imageDisplay,1);
 
+}
+void matchImage::correlationMatch(Mat image1,Mat image2,Mat drawImg)
+{
+    xx=0;
+    int WH = max(image2.cols,image2.rows);
+    Point2f pc(WH/2., WH/2.);
+    matchTemplate(image1, image2 , corr, TM_CCORR_NORMED);          // check correlation btw 2 img
+    correl = corr.at<float>(0,0);
+    preImgRotate = image1.clone();
+    int bright = image2.at<uchar>(0,0);                             // border bright
+
+    for(int angle=0;angle<=360;angle+=45)
+    {
+
+        r = getRotationMatrix2D(pc, angle, 1.0);
+
+        warpAffine(image1, image1 ,r, image1.size(),INTER_LINEAR,BORDER_CONSTANT,Scalar(bright ,bright ,bright ));
+        matchTemplate(image1, image2 , corr, TM_CCORR_NORMED);       // check correlation btw 2 img
+        correl = corr.at<float>(0,0);
+        if(incX==412&&incY==186&&angle==180)
+        {
+              imshow("IMAGE",image1);
+              printf("Ret: %f\n",correl);
+
+        }
+        if(correl>inputCorrel)
+        {
+            correlD[countMatch] = correl;
+            a[countMatch] = angle;
+            printf("Match) X:%d Y:%d angle:%d  Correl:%f\n",incX,incY,angle,correl);
+            rectangle( drawImg ,Point( incX , incY ),Point( incX+wTemp-1 , incY+hTemp-1), Scalar(0, 255 ,0));
+            xx=1;
+            break;
+        }
+        image1= preImgRotate.clone();
+    }
+   imageDisplay = drawImg.clone();
 }
 void matchImage::shapeBaseMatch(Mat image1,Mat image2,Mat drawImg)
 {
@@ -393,23 +487,18 @@ void matchImage::shapeBaseMatch(Mat image1,Mat image2,Mat drawImg)
         imshow("canny Output1",canny_output);
         printf("Canny 5 : %f\n",ret);
     }*/
+    xx=0;
     if(ret<0.05)
     {
-        //printf("Ret %f\n",ret);
+        if(incX ==76 && incY == 112)imshow("canny Output1",canny_output);
+        correlD[countMatch] = ret;
         for( size_t i = 0; i< contours.size(); i++ )
         {
              //Scalar color = Scalar( rng.uniform(255, 255), rng.uniform(0,0), rng.uniform(0,0) );
              drawContours( drawImg, contours, (int)i, color, 2, 8, hierarchy, 0, Point(incX,incY) );  //430 190
         }
-        //rectangle( imageSrc,Point( incX , incY ),Point( incX+wTemp-1, incY+hTemp-1 ), Scalar(255, 0 ,0),CV_FILLED);
         xx=1;
-        testM++;
         imageDisplay = drawImg.clone();
-    }
-    else if(ret>5)
-    {
-        //rectangle( imageSrc,Point( incX , incY ),Point( incX+wTemp-1, incY+hTemp-1 ), Scalar(255, 0 ,0),CV_FILLED);
-        xx=-1;
     }
 
 
@@ -420,14 +509,14 @@ void matchImage::labelingLocation()
     component = new int[row*col];
     input = new int[row*col];
 
-    int count=0,countInput=0;
+    int countInput=0;
     for (int y = 0;y < row; y++)
     {
         for (int x = 0; x < col; x++)
         {
             output[y][x] = imageResult.at<uchar>(y,x);
 
-            if(output[y][x] > 160)
+            if(output[y][x] > 180)  // find number
             {
                 input[countInput++]=output[y][x]=1;
             }
@@ -537,7 +626,12 @@ void matchImage::findInterestedLocation()
     imageResult.create( result_rows, result_cols, CV_8UC1 );//CV_32FC1  //CV_8UC1
     matchTemplate( resizeSrcImage, resizeTempImage, imageResult, TM_CCORR_NORMED);
     normalize( imageResult,imageResult, 0, 1, NORM_MINMAX, -1, Mat() );
-    imshow("SAVE THIS RESULT.",imageResult); // manual save .
+    //imshow("SAVE THIS RESULT.",imageResult);
+    imageResult.convertTo(imageResult,CV_8UC1,255);
+    row = imageResult.rows;
+    col = imageResult.cols;
+    hResult = col;
+    wResult = row;
     checkFind = 1;
 }
 void matchImage::AddRoot(QString name,QString description,int index)
@@ -549,12 +643,15 @@ void matchImage::AddRoot(QString name,QString description,int index)
 
     if(index != -1)
     {
-       QString xstr = QString::number(x[index]);
-       QString ystr = QString::number(y[index]);
+       QString xstr = QString::number(xDis[index]);
+       QString ystr = QString::number(yDis[index]);
        QString wstr = QString::number(w[index]);
        QString hstr = QString::number(h[index]);
        QString cor = QString::number(correlD[index]);
        QString an = QString::number(a[index]);
+       if(ui->chk_shape->isChecked())
+       AddChild(itm,"Difference",cor);
+       else
        AddChild(itm,"Correlation",cor);
        AddChild(itm,"X",xstr);
        AddChild(itm,"Y",ystr);
