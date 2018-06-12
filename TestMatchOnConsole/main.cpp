@@ -1,4 +1,4 @@
-#include <QCoreApplication>
+    #include <QCoreApplication>
 
 //--------------------------------------------- OpenCV
 #include <opencv2/core/core.hpp>
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
         Size sizeTemp(newWTemp,newHTemp);
         resize(tempImg,resizeTempImg,sizeTemp);
     }
-    /*else
+    else
     {
         resizeImage = image.clone();
         resizeTempImg = tempImg.clone();
@@ -49,12 +49,10 @@ int main(int argc, char *argv[])
 
         newWTemp =  wTemp;
         newHTemp =  hTemp;
-    }*/
+    }
 
     imshow("Input",image );
-    imshow("Resize Input",resizeImage );
-    printf("H TEMP %d\n",newHTemp);
-    printf("H  %d\n",newHSrc);
+    //imshow("Resize Input",resizeImage );
     Mat result;
     //int result_cols =  image.cols - tempImg.cols + 1,result_rows = image.rows - tempImg.rows + 1;
     int result_cols =  newWSrc - newWTemp + 1,result_rows = newHSrc - newHTemp + 1;
@@ -62,7 +60,7 @@ int main(int argc, char *argv[])
     matchTemplate( resizeImage, resizeTempImg, result, TM_CCORR_NORMED);
     normalize( result, result, 0, 1, NORM_MINMAX, -1, Mat() );
 
-    imshow("Result",result);
+    //imshow("Result",result);
 
     //imwrite("ResultImg.png",result);
     //result = imread("D://Internship/build-Test-Desktop_Qt_5_11_0_MinGW_32bit-Debug/ResultImg.png", 0);  // dog
@@ -81,7 +79,6 @@ int main(int argc, char *argv[])
     int count=0;
 
     int wSlide= min(tempImg.cols,tempImg.rows);
-
     Mat cropChkImg;
     Rect roi;
     roi.width = wSlide;
@@ -96,12 +93,15 @@ int main(int argc, char *argv[])
 
     int angle=0;
 
-    Mat corr,r,preImgRotate;
+    Mat corr,r,r2,preImgRotate;
     float correl;
 
     int WH = max(tempImg.cols,tempImg.rows);
     Point2f pc(WH/2., WH/2.);
+    r = getRotationMatrix2D(pc, angle, 1.0);
 
+
+    int maskImage[row][col];
     Mat imgSrcRotate=image.clone();
     int output[row][col];
         for (int y = 0;y < row; y++)
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
             {
                 output[y][x] = result.at<uchar>(y,x);
 
-                if(output[y][x] > 155){
+                if(output[y][x] > 160 && maskImage[y][x]!=-1){
                     //printf("-");
                     //printf("%d %d~",x,y);
 
@@ -135,21 +135,41 @@ int main(int argc, char *argv[])
                     {
 
                         r = getRotationMatrix2D(pc, angle, 1.0);
-                        warpAffine(cropChkImg, cropChkImg ,r, cropChkImg.size());
 
-                        if(incX==310&&incY==65&&angle==315)imshow("ccc",cropChkImg);
+                        if(incX==310&&incY==65&&angle==315)
+                        {
+                             warpAffine(cropChkImg, cropChkImg ,r, cropChkImg.size(),INTER_LINEAR,BORDER_CONSTANT,Scalar(255,255,255));
+                             imshow("Angle 315",cropChkImg);
+                             imshow("Temp",tempImg);
+                        }
+                        else
+                            warpAffine(cropChkImg, cropChkImg ,r, cropChkImg.size());
 
                         matchTemplate(cropChkImg, tempImg , corr, TM_CCORR_NORMED);       // check correlation btw 2 img
                         correl = corr.at<float>(0,0);
-                        if(correl>0.9)
+                          if(incX==310&&incY==65&&angle==315)
+                          {
+                              printf("Ret: %f\n",correl);
+                          }
+                        if(correl>0.89)
                         {
-                            printf("Match) X:%d Y:%d angle:%d  Correl:%.2f\n",incX,incY,angle,correl);
+                            printf("Match) X:%d Y:%d angle:%d  Correl:%f\n",incX,incY,angle,correl);
                             rectangle( imageDis,Point( incX , incY ),Point( incX+wTemp-1 , incY+hTemp-1), Scalar(0, 255 ,0));
                             rectangle( image,Point( incX , incY ),Point( incX+wTemp-1, incY+hTemp-1 ), Scalar(255, 0 ,0),CV_FILLED);
-                            imshow("Clear ",image);
+                            //imshow("Clear ",image);
                             cropChkImg = preImgRotate.clone();
+                            for(int i=y;i-y<wSlide;i++)
+                            {
+                                for(int j=x;j-x<wSlide;j++)
+                                {
+                                    maskImage[i][j] = -1;
+                                }
+                            }
+                            x+= wSlide;
                             break;
                         }
+                        cropChkImg = preImgRotate.clone();
+
                     }
                     cropChkImg = preImgRotate.clone();
                     //rectangle( imageDis,Point( incX , incY ),Point( incX+wTemp-1 , incY+hTemp-1), Scalar(0, 255 ,0));
@@ -174,9 +194,6 @@ int main(int argc, char *argv[])
     printf("\nPixel %d\n ",image.rows*image.cols);
     //printf("AVG %d\n ",average);
     printf("Count %d\n ",count);
-
-
-
 
     return a.exec();
 }
