@@ -42,10 +42,6 @@ private slots:
 
     void on_btn_match1_clicked();
 
-    void on_btn_openResult_clicked();
-
-    void on_btn_match2_clicked();
-
     void on_btn_viewImg1_clicked();
 
     void updateImage(cv::Mat img,int viewImage);
@@ -83,6 +79,7 @@ private:
     int chkImage1=0,chkImage2=0,chkImage3=0,countMatch=0;
 
     int xDis[50],yDis[50],w[50],h[50],a[50],row,col;
+
     float inputCorrel=0.5,correlD[50];
 
     int newWSrc,newHSrc,newWTemp,newHTemp,hResult,wResult;
@@ -101,10 +98,13 @@ private:
 
     std::vector<cv::Point>cnt2 ;
 
+
     float correl;
     cv::Mat corr, preImgRotate,r;
     cv::Point pos_begin,pos_end;
     QPixmap imagePaintCrop;
+
+    int brightness;
 };
 
 #endif // MATCHIMAGE_H

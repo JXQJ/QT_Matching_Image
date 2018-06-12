@@ -168,7 +168,8 @@ void matchImage::updateImage(Mat img,int viewImage)
     else if(viewImage==3)
     {
         ui->viewImage3->setPixmap(imgIn);
-        ui->viewImage3->setAlignment(Qt::AlignCenter);
+        //ui->viewImage3->setAlignment(Qt::AlignCenter);
+        ui->viewImage3->setScaledContents(true);
         ui->viewImage3->show();
     }
 
@@ -473,7 +474,7 @@ void matchImage::shapeBaseMatch(Mat image1,Mat image2,Mat drawImg)
         Canny( image2, canny_output2,thresValue, thresValue*2, 3 );
         findContours( canny_output2, contours2, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
         cnt2 = contours2[0];
-        imshow("canny Output Temp",canny_output2);
+        //imshow("canny Output Temp",canny_output2);
         firstShapeBase=1;
     }
 
@@ -508,15 +509,15 @@ void matchImage::labelingLocation()
     int output[row][col];
     component = new int[row*col];
     input = new int[row*col];
-
     int countInput=0;
+    brightness = ui->brightnessResult->value();
     for (int y = 0;y < row; y++)
     {
         for (int x = 0; x < col; x++)
         {
             output[y][x] = imageResult.at<uchar>(y,x);
 
-            if(output[y][x] > 180)  // find number
+            if(output[y][x] >= brightness)  // find brightness
             {
                 input[countInput++]=output[y][x]=1;
             }
@@ -601,8 +602,8 @@ void matchImage::resizeImageFn(int i,float reFac)
         cv::resize(imageSrc, resizeSrcImage,Size(), reFac, reFac);
         cv::resize(imageTemp, resizeTempImage,Size(), reFac, reFac);
 
-        imshow("Resize Src Img",resizeSrcImage);
-        imshow("Resize Temp Img",resizeTempImage);
+        //imshow("Resize Src Img",resizeSrcImage);
+        //imshow("Resize Temp Img",resizeTempImage);
 
         isReSize=1;
     }
@@ -632,6 +633,7 @@ void matchImage::findInterestedLocation()
     col = imageResult.cols;
     hResult = col;
     wResult = row;
+    updateImage(imageResult,3);
     checkFind = 1;
 }
 void matchImage::AddRoot(QString name,QString description,int index)
@@ -655,6 +657,7 @@ void matchImage::AddRoot(QString name,QString description,int index)
        AddChild(itm,"Correlation",cor);
        AddChild(itm,"X",xstr);
        AddChild(itm,"Y",ystr);
+       if(ui->chk_correlation->isChecked())
        AddChild(itm,"Angle(CW)",an);
        AddChild(itm,"Width",wstr);
        AddChild(itm,"Height",hstr);

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1626</width>
+    <width>1611</width>
     <height>786</height>
    </rect>
   </property>
@@ -350,9 +350,9 @@
    <property name="geometry">
     <rect>
      <x>740</x>
-     <y>540</y>
-     <width>201</width>
-     <height>201</height>
+     <y>550</y>
+     <width>181</width>
+     <height>171</height>
     </rect>
    </property>
   </widget>
@@ -360,9 +360,9 @@
    <property name="geometry">
     <rect>
      <x>760</x>
-     <y>560</y>
-     <width>161</width>
-     <height>161</height>
+     <y>570</y>
+     <width>141</width>
+     <height>131</height>
     </rect>
    </property>
    <property name="text">
@@ -372,8 +372,8 @@
   <widget class="QLabel" name="label_12">
    <property name="geometry">
     <rect>
-     <x>960</x>
-     <y>620</y>
+     <x>950</x>
+     <y>550</y>
      <width>401</width>
      <height>41</height>
     </rect>
@@ -388,6 +388,80 @@
    <property name="text">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Interested location Image&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
+  </widget>
+  <widget class="QGroupBox" name="groupBox_5">
+   <property name="geometry">
+    <rect>
+     <x>950</x>
+     <y>590</y>
+     <width>231</width>
+     <height>131</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Brightness</string>
+   </property>
+   <widget class="QSlider" name="brightnessResult">
+    <property name="geometry">
+     <rect>
+      <x>50</x>
+      <y>70</y>
+      <width>141</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="minimum">
+     <number>100</number>
+    </property>
+    <property name="maximum">
+     <number>255</number>
+    </property>
+    <property name="value">
+     <number>180</number>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>70</y>
+      <width>21</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>100</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_4">
+    <property name="geometry">
+     <rect>
+      <x>200</x>
+      <y>70</y>
+      <width>21</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>255</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_5">
+    <property name="geometry">
+     <rect>
+      <x>110</x>
+      <y>40</y>
+      <width>21</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>180</string>
+    </property>
+   </widget>
   </widget>
   <zorder>listView</zorder>
   <zorder>listView_2</zorder>
@@ -406,8 +480,26 @@
   <zorder>listView_3</zorder>
   <zorder>viewImage3</zorder>
   <zorder>label_12</zorder>
+  <zorder>groupBox_5</zorder>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>brightnessResult</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>label_5</receiver>
+   <slot>setNum(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>1065</x>
+     <y>663</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>1065</x>
+     <y>640</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>
